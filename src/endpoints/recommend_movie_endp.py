@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Form, File, UploadFile
-from src.operations.recommend_movie import recommend_movie
+from fastapi import APIRouter
+from src.operations.recommend_movie import recommend_movie, fetch_movie_id, fetch_movie_details
 
 
 router = APIRouter(
@@ -13,6 +13,16 @@ router = APIRouter(
 @router.get("/")
 async def get_recommend_movie(movie_name: str):
     return recommend_movie(movie_name)
+
+
+
+@router.get("/movie_details")
+async def get_movie_details(movie_id: int):
+    return fetch_movie_details(movie_id)
+
+
+
+
 
    
 

@@ -1,7 +1,49 @@
 import pandas as pd
-import numpy as np
 from scipy.sparse import csr_matrix
 from sklearn.neighbors import NearestNeighbors
+import re
+import requests
+
+
+def fetch_movie_id(movie_name):
+    movies = pd.read_csv('https://portfolio-project-images-yash.s3.ap-south-1.amazonaws.com/tmdb_5000_movies.csv', usecols = ['id', 'original_title'], dtype = {'id': 'int32', 'original_title': 'str'})
+    movie_name_cleaned = re.sub(r'\s*\(\d{4}\)', '', movie_name)
+    
+    # Find the movie by matching the cleaned movie name
+    movie_row = movies[movies['original_title'] == movie_name_cleaned]
+    if not movie_row.empty:
+        return movie_row['id'].iloc[0]
+    else:
+        return None
+    
+
+# curl --request GET \
+#      --url 'https://api.themoviedb.org/3/movie/209112?language=en-US' \
+#      --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI4M2I0NGNkZjAyYmRkOTVhN2MyZmE0YWI2NzUxNGU2YSIsIm5iZiI6MTcyODkyNjEwNC42MTQ4NjksInN1YiI6IjY3MGQ1MGM1ZjU4YTkyMDZhYTQxODI4YyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.K_4bSJOop772JQ66j4taMlnQD0DtIZi-Ny3imLdx33s' \
+#      --header 'accept: application/json'
+    
+
+def fetch_movie_details(movie_id):
+    result = {}
+    url = "https://api.themoviedb.org/3/movie/{0}?api_key=83b44cdf02bdd95a7c2fa4ab67514e6a&language=en-US".format(movie_id)
+    response = requests.get(url)
+    response_json = response.json()
+
+    # Check if 'poster_path' exists in the response
+    poster_path = response_json.get('poster_path')
+    if poster_path:
+        full_path = "https://image.tmdb.org/t/p/w500/" + poster_path
+    else:
+        full_path = None  # Or provide a default image URL if necessary
+
+    result['title'] = response_json.get('original_title', 'N/A')
+    result['poster_path'] = full_path
+    result['overview'] = response_json.get('overview', 'No overview available')
+    result['tagline'] = response_json.get('tagline', '')
+
+    return result
+
+
 
 def recommend_movie(movie_name):
     # Load the data
@@ -46,5 +88,21 @@ def recommend_movie(movie_name):
     recommendations = []
     for i in range(1, len(distances.flatten())):
         recommendations.append(movie_features_df.index[indices.flatten()[i]])
+
     
-    return recommendations
+    result = {}
+
+
+    for movie in recommendations:
+        movie_id = fetch_movie_id(movie)
+        movie_details = fetch_movie_details(movie_id)
+        result[movie] = movie_details
+
+    return result
+
+    
+
+
+    
+
+    
