@@ -60,6 +60,7 @@ def fetch_movie_details(movie_id):
         full_path = None  # Or provide a default image URL if necessary
 
     result['poster_path'] = full_path
+    result['movie'] = response_json.get('original_title', 'No title available')
     result['overview'] = response_json.get('overview', 'No overview available')
     result['tagline'] = response_json.get('tagline', '')
 
@@ -119,7 +120,7 @@ def recommend_movie(movie_name):
         movie_id = fetch_movie_id(movie)
         movie_details = fetch_movie_details(movie_id)
         result[movie] = movie_details
-        result[movie]['title'] = movie
+        result[movie]['title'] = fix_movie_title(movie)
 
     return result
 
