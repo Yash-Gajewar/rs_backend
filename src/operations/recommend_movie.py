@@ -5,16 +5,39 @@ import re
 import requests
 
 
-def fetch_movie_id(movie_name):
-    movies = pd.read_csv('https://portfolio-project-images-yash.s3.ap-south-1.amazonaws.com/tmdb_5000_movies.csv', usecols = ['id', 'original_title'], dtype = {'id': 'int32', 'original_title': 'str'})
+import re
+import pandas as pd
+
+def fix_movie_title(movie_name):
+    """
+    This function detects movie titles in the format 'Title, The (Year)' or 'Title, A (Year)'
+    and converts them into 'The Title' or 'A Title', respectively.
+    """
+    # Remove the release year in parentheses (e.g., (2001))
     movie_name_cleaned = re.sub(r'\s*\(\d{4}\)', '', movie_name)
+
+    # Use a regex to find if there is a comma followed by 'The', 'A', or 'An' and reorder them
+    fixed_title = re.sub(r'^(.*),\s*(The|A|An)$', r'\2 \1', movie_name_cleaned)
     
-    # Find the movie by matching the cleaned movie name
+    return fixed_title
+
+def fetch_movie_id(movie_name):
+    # Fix the movie title to reorder if needed
+    movie_name_cleaned = fix_movie_title(movie_name)
+
+    # Load the movie dataset
+    movies = pd.read_csv('https://portfolio-project-images-yash.s3.ap-south-1.amazonaws.com/tmdb_5000_movies.csv', 
+                         usecols=['id', 'original_title'], 
+                         dtype={'id': 'int32', 'original_title': 'str'})
+
+    # Find the movie by matching the corrected movie name
     movie_row = movies[movies['original_title'] == movie_name_cleaned]
+    
     if not movie_row.empty:
         return movie_row['id'].iloc[0]
     else:
         return None
+
     
 
 # curl --request GET \
@@ -36,7 +59,6 @@ def fetch_movie_details(movie_id):
     else:
         full_path = None  # Or provide a default image URL if necessary
 
-    result['title'] = response_json.get('original_title', 'N/A')
     result['poster_path'] = full_path
     result['overview'] = response_json.get('overview', 'No overview available')
     result['tagline'] = response_json.get('tagline', '')
@@ -97,6 +119,7 @@ def recommend_movie(movie_name):
         movie_id = fetch_movie_id(movie)
         movie_details = fetch_movie_details(movie_id)
         result[movie] = movie_details
+        result[movie]['title'] = movie
 
     return result
 
